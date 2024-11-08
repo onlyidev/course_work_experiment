@@ -76,9 +76,9 @@ class BlackBoxDetector:
         :param y: Labels for the examples
         """
         if isinstance(X, Tensor):
-            X = X.numpy()
+            X = X.cpu().numpy()
         if isinstance(y, Tensor):
-            y = y.numpy()
+            y = y.cpu().numpy()
         self._model.fit(X, y)
         self.training = False
 
@@ -94,6 +94,6 @@ class BlackBoxDetector:
         if torch.cuda.is_available():
             X = X.cpu()
         if isinstance(X, Tensor):
-            X = X.numpy()
+            X = X.cpu().numpy()
         y = torch.from_numpy(self._model.predict(X)).float()
         return y.cuda() if torch.cuda.is_available() else y

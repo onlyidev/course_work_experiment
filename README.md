@@ -20,7 +20,7 @@ The malware GAN is provided as a package in the folder `malgan`.  A driver scrip
 
 For checkout purposes, we recommend calling:
 
-    python main.py 10 32 100 data/trial_mal.npy data/trial_ben.npy 
+```python main.py 10 32 100 data/trial_mal.npy data/trial_ben.npy```
 
 ## Dataset
 

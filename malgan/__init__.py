@@ -42,9 +42,9 @@ TensorTuple = Tuple[Tensor, Tensor]
 
 IS_CUDA = torch.cuda.is_available()
 if IS_CUDA:
-    device = torch.device('cuda:0')
-    # noinspection PyUnresolvedReferences
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
+    torch.set_default_device("cuda")
+    gen = torch.Generator(device="cuda")
+    torch.set_default_dtype(torch.float32)
 
 
 class MalwareDataset(Dataset):
@@ -88,10 +88,10 @@ class _DataGroup:  # pylint: disable=too-few-public-methods
 
         :param batch_size: Batch size for training
         """
-        self.train = DataLoader(self.train, batch_size=batch_size, shuffle=True, pin_memory=True)
+        self.train = DataLoader(self.train, batch_size=batch_size, shuffle=True, pin_memory=False, generator=gen)
         if self.valid:
-            self.valid = DataLoader(self.valid, batch_size=batch_size, pin_memory=True)
-        self.test = DataLoader(self.test, batch_size=batch_size, pin_memory=True)
+            self.valid = DataLoader(self.valid, batch_size=batch_size, pin_memory=False, generator=gen)
+        self.test = DataLoader(self.test, batch_size=batch_size, pin_memory=False, generator=gen)
         self.is_loaders = True
 
 
@@ -178,7 +178,7 @@ class MalGAN(nn.Module):
 
             # Order must be train, validation, test
             lengths = [len(dataset) - valid_len - test_len, valid_len, test_len]
-            return _DataGroup(*torch.utils.data.random_split(dataset, lengths))
+            return _DataGroup(*torch.utils.data.random_split(dataset, lengths, generator=gen))
 
         # Split between train, test, and validation then construct the loaders
         self._mal_data = split_train_valid_test(mal_data, is_benign=False)
