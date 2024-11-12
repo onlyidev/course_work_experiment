@@ -5,3 +5,6 @@ scikit_learn>=0.20.2
 tensorboardX
 torch-tb-profiler
 lief
+matplotlib
+vt-py
+python-dotenv
