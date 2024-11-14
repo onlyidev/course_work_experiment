@@ -11,9 +11,8 @@ while read -r hash; do
     if [[ "$RESP" == 1 ]]; then
         echo "Malware"
         ./getData.sh ${hash} ./data/malware
-    elif [[ "$RESP" == 0 ]]; then
-        echo "Not malware"
-        ./getData.sh ${hash} ./data/benign
+    else
+        echo "Not malware -- skipping"
     fi
      # Remove the processed hash from the file
     sed -i "1d" "$HASH_FILE"

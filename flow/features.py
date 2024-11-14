@@ -37,9 +37,9 @@ class Features:
         b.build_imports(True)
         b.patch_imports(False)
         b.build()
-        b.write(os.path.join(dirPath, f"test_{idx}"))
+        b.write(os.path.join(dirPath, f"{idx}"))
 
-    def obfuscate(self, encodings: np.ndarray, dirPath: str) -> None:
+    def obfuscate(self, prefix, encodings: np.ndarray, dirPath: str) -> None:
         for i, encoding in enumerate(encodings): 
             libs = self.reverseEncoding(encoding)
             pe = lief.parse(list(self.pathList)[i])
@@ -52,4 +52,4 @@ class Features:
 
                 new_lib.add_entry(func)
             logging.info("Saving...")
-            self._saveAE(pe, i, dirPath)
+            self._saveAE(pe, f"{prefix}_{i}", dirPath)

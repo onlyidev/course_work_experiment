@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import os
 from flow.features import Features
 import ast
-import tensorboardX
+import pandas as pd
 
 
 Z=128
@@ -71,7 +71,8 @@ malgan = WithThreshold(MalGAN(load_dataset(mal_file, MalGAN.Label.Malware.value)
                     g_hidden=g_hidden,
                     detector_type=detector))
 
-malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=randomforest_g=leakyrelu_final.pth")
+# malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=randomforest_g=leakyrelu_final.pth")
+malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
 malgan.eval()
 
 # malwareMatrix = np.load("data/malware.npy")
@@ -97,22 +98,27 @@ def loadDir(path: str) -> list:
     filteredDir = list(filter(lambda x: not x.startswith("download") and not os.path.isdir(os.path.join(path, x)), dir))
     return chunk([os.path.join(path, file) for file in filteredDir], 32)
 
+def getFileSha(path: str) -> str:
+    return os.popen(f"sha256sum -b {path}").read().split(" ", 1)[0]
 
 apis = ast.literal_eval(open("apis", "r").read())
 f = Features(apis)
 
 batchedSamples = loadDir("lk_dataset/data/malware")
+df = []
+
 logging.info("Encoding...")
-tb = tensorboardX.SummaryWriter()
 for idx, samples in enumerate(batchedSamples):
     logging.info(f"Encoding batch {idx+1}")
     encoding = np.array([f.createEncoding(sample) for sample in samples])
     logging.info("Generating...")
     obfuscated = obfuscate(encoding)
-    tb.add_scalars("Confidence", {"Confidence": malgan.lastConfidence.mean()}, idx)
     logging.info("Getting new libs...")
     delta = (encoding ^ obfuscated) & obfuscated
     logging.info("Obfuscating...")
-    f.obfuscate(delta, "lk_dataset/data/obfuscated")
+    f.obfuscate(f"batch{idx}", delta, "lk_dataset/data/obfuscated")
+    [df.append({"malware": sample, "obfuscated": getFileSha(os.path.join("lk_dataset/data/obfuscated", f"batch{idx}_{i}")), "added_features": delta[i].sum()}) for i, sample in enumerate(samples)]
     logging.info("Done...")
-tb.close()
+
+df = pd.DataFrame(df)
+df.to_csv("lk_dataset/data/df.csv", index=False)
