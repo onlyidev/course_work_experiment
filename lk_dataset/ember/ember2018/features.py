@@ -1,25 +1,27 @@
 import pandas as pd
 import ast
 import numpy as np
-debug = []
+from collections import Counter
 df1 = pd.read_csv("./malware.csv")
 df2 = pd.read_csv("./benign.csv")
 df = pd.concat([df1,df2])
 
 
-# def createFeaturesVector():
-#     s=set()
-#     for _,item in df.iterrows():
-#         d=ast.literal_eval(item["imports"])
-#         [s.add(f"{lib}/{func}") for lib,funcs in d.items() for func in funcs]
-#     return s
+def createFeaturesVector():   
+    c=Counter()
+    for _,item in df.iterrows():
+        d=ast.literal_eval(item["imports"])
+        for lib,funcs in d.items():
+            for func in funcs:
+                c[f"{lib}/{func}"]+=1
+    return c
 
-# s=createFeaturesVector()
-# allFeatures = str(s)
+s=createFeaturesVector()
+allFeatures = str([a for a,_ in s.most_common(10000)])
 
-# with open("./apis", 'w') as f:
-#     f.write(allFeatures)
-#     f.close()
+with open("./apis", 'w') as f:
+    f.write(allFeatures)
+    f.close()
 
 # ---
 

@@ -164,10 +164,11 @@ class MalGAN(nn.Module):
         logging.debug("Test Split Ratio: %.3f", test_split)
         logging.debug("Generator Hidden Layer Sizes: %s", h_gen)
         logging.debug("Discriminator Hidden Layer Sizes: %s", h_discrim)
-        logging.debug("Blackbox Detector Type: %s", detector_type.name)
+        logging.debug("Blackbox Detector Type: %s", "None" if detector_type is None else detector_type.name)
         logging.debug("Activation Type: %s", self._g.__class__.__name__)
 
-        self._bb = BlackBoxDetector(detector_type)
+        if detector_type is not None:
+            self._bb = BlackBoxDetector(detector_type)
         self._gen = Generator(M=self.M, Z=self.Z, hidden_size=h_gen, g=self._g)
         self._discrim = Discriminator(M=self.M, hidden_size=h_discrim, g=self._g)
 
@@ -184,7 +185,8 @@ class MalGAN(nn.Module):
         self._mal_data = split_train_valid_test(mal_data, is_benign=False)
         self._ben_data = split_train_valid_test(ben_data, is_benign=True)
         # noinspection PyTypeChecker
-        self._fit_blackbox(self._mal_data.train, self._ben_data.train)
+        if detector_type is not None:
+            self._fit_blackbox(self._mal_data.train, self._ben_data.train)
 
         self._mal_data.build_loader(MalGAN.MALWARE_BATCH_SIZE)
         ben_bs_frac = len(ben_data) / len(mal_data)
@@ -307,7 +309,7 @@ class MalGAN(nn.Module):
         for (m, _), (b, _) in zip(self._mal_data.train, self._ben_data.train):
             if self._is_cuda: m, b = m.cuda(), b.cuda()
             m_prime, g_theta = self._gen.forward(m)
-            l_g = self._calc_gen_loss(g_theta)
+            l_g = self._calc_gen_loss(g_theta) + self._calc_gen_penalty(m, m_prime)
             g_optim.zero_grad()
             l_g.backward()
             # torch.nn.utils.clip_grad_value_(l_g, 1)
@@ -330,8 +332,8 @@ class MalGAN(nn.Module):
         loss = 0
         for m, _ in loader:
             if self._is_cuda: m = m.cuda()
-            _, g_theta = self._gen.forward(m)
-            loss += self._calc_gen_loss(g_theta)
+            m_prime, g_theta = self._gen.forward(m)
+            loss += self._calc_gen_loss(g_theta) + self._calc_gen_penalty(m, m_prime)
         # noinspection PyUnresolvedReferences
         return (loss / len(loader)).item()
 
@@ -344,6 +346,17 @@ class MalGAN(nn.Module):
         """
         d_theta = self._discrim.forward(g_theta)
         return d_theta.log().mean()
+    
+    def _calc_gen_penalty(self, m: Tensor, m_prime: Tensor) -> Tensor:
+        r"""
+        Calculates the penalty for perturbations (we want to minimze the count)
+
+        :param m: Original malware tensor
+        :param m_prime: Perturbed malware tensor
+        :return: Penalty that should be added to loss.
+        """
+        delta = (m - m_prime).abs().sum(dim=1)
+        return (delta/self.M/2).mean()
 
     def _calc_discrim_loss(self, X: Tensor) -> Tensor:
         r"""
@@ -429,6 +442,9 @@ class MalGAN(nn.Module):
         :return: :math:`m'` and :math:`g_{\theta}` respectively
         """
         return self._gen.forward(x)
+    
+    def confidence(self, x: Tensor) -> Tensor:
+        return self._discrim.forward(x)
 
     def load(self, filename: PathOrStr) -> None:
         r"""

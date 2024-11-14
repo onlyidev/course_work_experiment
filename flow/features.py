@@ -2,6 +2,7 @@ import numpy as np
 import lief
 import os
 from typing import List, Tuple
+from malgan._log_tools import logging
 
 class Features:
     def __init__(self, fullList: dict) -> None:
@@ -10,13 +11,13 @@ class Features:
         self.pathList = list()
 
     def _parseAPIs(self, path: str) -> List[Tuple[str, str]]:
-        self.pathList.append(path)
         pe = lief.parse(path)
         arr = []
         for lib in pe.imports:
             for func in lib.entries:
                 arr.append(self.tupleToStr((lib.name, func.name)))
         arr.sort()
+        self.pathList.append(path)
         return arr
     
     @staticmethod
@@ -32,18 +33,23 @@ class Features:
         return [tuple(self.full[i].split("/", 1)) for i in idx]
 
     def _saveAE(self, pe, idx: int, dirPath: str):
-        pe.write(os.path.join(dirPath, f"test_{idx}"))
+        b = lief.PE.Builder(pe)
+        b.build_imports(True)
+        b.patch_imports(False)
+        b.build()
+        b.write(os.path.join(dirPath, f"test_{idx}"))
 
     def obfuscate(self, encodings: np.ndarray, dirPath: str) -> None:
         for i, encoding in enumerate(encodings): 
             libs = self.reverseEncoding(encoding)
             pe = lief.parse(list(self.pathList)[i])
+            logging.info("Adding libraries...")
             for lib,func in libs:
                 if lib not in [pelib.name for pelib in pe.imports]:
                     new_lib = pe.add_library(lib)
                 else:
                     new_lib = next(pelib for pelib in pe.imports if pelib.name == lib)
 
-                # Add the new API (function) to the DLL import
                 new_lib.add_entry(func)
+            logging.info("Saving...")
             self._saveAE(pe, i, dirPath)

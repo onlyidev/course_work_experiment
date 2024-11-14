@@ -9,13 +9,14 @@ import matplotlib.pyplot as plt
 import os
 from flow.features import Features
 import ast
+import tensorboardX
 
 
 Z=128
 h_gen=[256,256]
 h_discrim=[256,256]
 g_hidden=nn.LeakyReLU
-detector=BlackBoxDetector.Type.RandomForest
+detector=None#BlackBoxDetector.Type.RandomForest
 mal_file="data/malware.npy"
 ben_file="data/benign.npy"
 
@@ -55,6 +56,7 @@ class WithThreshold(nn.Module):
 
     def forward(self, x):
         x = self.base_model(x)
+        self.lastConfidence = self.base_model.confidence(x[1])
         x = self.sigmoid(x[1])
         return (x > self.threshold).int()
 
@@ -85,22 +87,32 @@ def obfuscate(batch: np.ndarray) -> np.ndarray:
         r = malgan(t)
         return r.cpu().numpy()
 
+def chunk(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 def loadDir(path: str) -> list:
     print(f"Loading files from {path}")
     dir = os.listdir(path)
     filteredDir = list(filter(lambda x: not x.startswith("download") and not os.path.isdir(os.path.join(path, x)), dir))
-    return [os.path.join(path, file) for file in filteredDir]
+    return chunk([os.path.join(path, file) for file in filteredDir], 32)
+
 
 apis = ast.literal_eval(open("apis", "r").read())
 f = Features(apis)
 
-samples = loadDir("lk_dataset/data/malware")
+batchedSamples = loadDir("lk_dataset/data/malware")
 logging.info("Encoding...")
-encoding = np.array([f.createEncoding(sample) for sample in samples])
-logging.info("Generating...")
-obfuscated = obfuscate(encoding)
-logging.info("Getting new libs...")
-delta = (encoding ^ obfuscated) & obfuscated
-logging.info("Obfuscating...")
-f.obfuscate(delta, "lk_dataset/data/obfuscated")
-logging.info("Done...")
+tb = tensorboardX.SummaryWriter()
+for idx, samples in enumerate(batchedSamples):
+    logging.info(f"Encoding batch {idx+1}")
+    encoding = np.array([f.createEncoding(sample) for sample in samples])
+    logging.info("Generating...")
+    obfuscated = obfuscate(encoding)
+    tb.add_scalars("Confidence", {"Confidence": malgan.lastConfidence.mean()}, idx)
+    logging.info("Getting new libs...")
+    delta = (encoding ^ obfuscated) & obfuscated
+    logging.info("Obfuscating...")
+    f.obfuscate(delta, "lk_dataset/data/obfuscated")
+    logging.info("Done...")
+tb.close()
