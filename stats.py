@@ -16,7 +16,7 @@ def analyzeInVT(sha):
 
 if not "undetected_malware" in df.columns:
     df["undetected_malware"] = df["malware"].apply(analyzeInVT)
+df.to_csv("lk_dataset/data/df.csv", index=False)
 if not "undetected_obfuscated" in df.columns:
-    df["undetected_obfuscated"] = df["obfuscated_sha256"].apply(analyzeInVT)
-
+    df["undetected_obfuscated"] = df["obfuscated"].apply(analyzeInVT)
 df.to_csv("lk_dataset/data/df.csv", index=False)

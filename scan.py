@@ -17,6 +17,3 @@ for idx, sample in enumerate(loadDir("lk_dataset/data/obfuscated")):
   print(f"Scanning {sample}...")
   with open(sample, "rb") as f:
     analysis = client.scan_file(f)
-  if idx % 4 == 3:
-    print(f"Waiting for 60 seconds...")
-    time.sleep(6)
