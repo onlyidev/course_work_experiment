@@ -46,6 +46,15 @@ class Generator(nn.Module):
         layer = nn.Sequential(nn.Linear(dim[-1], M), nn.Sigmoid())
         self._layers.add_module("FF%02d" % len(dim), layer)
 
+    def _gaussianZ(self, shape):
+        # Step 1: Sampqle from a standard Gaussian distribution
+        samples = torch.randn(shape)
+        
+        # Step 2: Normalize to the range [-1, 1]
+        samples = (samples - samples.min()) / (samples.max() - samples.min())  # Scale to [0, 1]
+        samples = samples * 2 - 1  # Shift to [-1, 1]
+        return samples
+
     # noinspection PyUnresolvedReferences
     def forward(self, m: torch.Tensor,
                 z: torch.Tensor = None) -> TensorTuple:  # pylint: disable=arguments-differ
@@ -62,7 +71,7 @@ class Generator(nn.Module):
         """
         if z is None:
             num_ele = m.shape[0]
-            z = torch.rand((num_ele, self._Z))
+            z = self._gaussianZ((num_ele, self._Z))
 
         # Concatenation of m and z
         o = torch.cat((m, z), dim=1)

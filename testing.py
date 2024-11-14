@@ -12,8 +12,8 @@ import ast
 import pandas as pd
 
 
-Z=128
-h_gen=[256,256]
+Z=64
+h_gen=[256,128,256,512,1024]
 h_discrim=[256,256]
 g_hidden=nn.LeakyReLU
 detector=None#BlackBoxDetector.Type.RandomForest
@@ -57,8 +57,7 @@ class WithThreshold(nn.Module):
     def forward(self, x):
         x = self.base_model(x)
         self.lastConfidence = self.base_model.confidence(x[1])
-        x = self.sigmoid(x[1])
-        return (x > self.threshold).int()
+        return (x[1] > self.threshold).int()
 
     def load(self, path):
         self.base_model.load(path)
@@ -72,7 +71,8 @@ malgan = WithThreshold(MalGAN(load_dataset(mal_file, MalGAN.Label.Malware.value)
                     detector_type=detector))
 
 # malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=randomforest_g=leakyrelu_final.pth")
-malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
+# malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
+malgan.load("saved_models/malgan_z=64_d-gen=[256,_128,_256,_512,_1024]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
 malgan.eval()
 
 # malwareMatrix = np.load("data/malware.npy")

@@ -35,7 +35,7 @@ class Features:
     def _saveAE(self, pe, idx: int, dirPath: str):
         b = lief.PE.Builder(pe)
         b.build_imports(True)
-        b.patch_imports(False)
+        b.patch_imports(True)
         b.build()
         b.write(os.path.join(dirPath, f"{idx}"))
 
