@@ -240,7 +240,7 @@ class MalGAN(nn.Module):
         MalGAN.tensorboard = tensorboardX.SummaryWriter()
 
         d_optimizer = optim.Adam(self._discrim.parameters(), lr=1e-5)
-        g_optimizer = optim.Adam(self._gen.parameters(), lr=1e-4)
+        g_optimizer = optim.Adam(self._gen.parameters(), lr=1e-3)
 
         if not quiet_mode:
             names = ["Gen Train Loss", "Gen Valid Loss", "Discrim Train Loss", "Best?"]
@@ -345,7 +345,7 @@ class MalGAN(nn.Module):
         :return: Loss for the generator smoothed output.
         """
         d_theta = self._discrim.forward(g_theta)
-        return d_theta.log().mean()
+        return -d_theta.log().mean()
     
     def _calc_gen_penalty(self, m: Tensor, m_prime: Tensor) -> Tensor:
         r"""

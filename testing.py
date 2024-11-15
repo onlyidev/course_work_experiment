@@ -107,18 +107,18 @@ f = Features(apis)
 batchedSamples = loadDir("lk_dataset/data/malware")
 df = []
 
-logging.info("Encoding...")
-for idx, samples in enumerate(batchedSamples):
-    logging.info(f"Encoding batch {idx+1}")
-    encoding = np.array([f.createEncoding(sample) for sample in samples])
-    logging.info("Generating...")
-    obfuscated = obfuscate(encoding)
-    logging.info("Getting new libs...")
-    delta = (encoding ^ obfuscated) & obfuscated
-    logging.info("Obfuscating...")
-    f.obfuscate(f"batch{idx}", delta, "lk_dataset/data/obfuscated")
-    [df.append({"malware": sample, "obfuscated": getFileSha(os.path.join("lk_dataset/data/obfuscated", f"batch{idx}_{i}")), "added_features": delta[i].sum()}) for i, sample in enumerate(samples)]
-    logging.info("Done...")
+# logging.info("Encoding...")
+# for idx, samples in enumerate(batchedSamples):
+#     logging.info(f"Encoding batch {idx+1}")
+#     encoding = np.array([f.createEncoding(sample) for sample in samples])
+#     logging.info("Generating...")
+#     obfuscated = obfuscate(encoding)
+#     logging.info("Getting new libs...")
+#     delta = (encoding ^ obfuscated) & obfuscated
+#     logging.info("Obfuscating...")
+#     f.obfuscate(f"batch{idx}", delta, "lk_dataset/data/obfuscated")
+#     [df.append({"malware": sample, "obfuscated": getFileSha(os.path.join("lk_dataset/data/obfuscated", f"batch{idx}_{i}")), "added_features": delta[i].sum()}) for i, sample in enumerate(samples)]
+#     logging.info("Done...")
 
-df = pd.DataFrame(df)
-df.to_csv("lk_dataset/data/df.csv", index=False)
+# df = pd.DataFrame(df)
+# df.to_csv("lk_dataset/data/df.csv", index=False)

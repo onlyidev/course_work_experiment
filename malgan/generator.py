@@ -52,7 +52,6 @@ class Generator(nn.Module):
         
         # Step 2: Normalize to the range [-1, 1]
         samples = (samples - samples.min()) / (samples.max() - samples.min())  # Scale to [0, 1]
-        samples = samples * 2 - 1  # Shift to [-1, 1]
         return samples
 
     # noinspection PyUnresolvedReferences
