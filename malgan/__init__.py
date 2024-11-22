@@ -155,6 +155,7 @@ class MalGAN(nn.Module):
         if not isinstance(g_hidden, nn.Module):
             g_hidden = g_hidden()
         self._g = g_hidden
+        self.penaltyCount = 0
 
         self._is_cuda = IS_CUDA
 
@@ -239,8 +240,8 @@ class MalGAN(nn.Module):
 
         MalGAN.tensorboard = tensorboardX.SummaryWriter()
 
-        d_optimizer = optim.Adam(self._discrim.parameters(), lr=1e-5)
-        g_optimizer = optim.Adam(self._gen.parameters(), lr=1e-3)
+        d_optimizer = optim.Adam(self._discrim.parameters(), lr=4*1e-4)
+        g_optimizer = optim.Adam(self._gen.parameters(), lr=1e-6)
 
         if not quiet_mode:
             names = ["Gen Train Loss", "Gen Valid Loss", "Discrim Train Loss", "Best?"]
@@ -345,7 +346,7 @@ class MalGAN(nn.Module):
         :return: Loss for the generator smoothed output.
         """
         d_theta = self._discrim.forward(g_theta)
-        return -d_theta.log().mean()
+        return d_theta.log().mean()
     
     def _calc_gen_penalty(self, m: Tensor, m_prime: Tensor) -> Tensor:
         r"""
@@ -355,8 +356,10 @@ class MalGAN(nn.Module):
         :param m_prime: Perturbed malware tensor
         :return: Penalty that should be added to loss.
         """
+        return 0
         delta = (m - m_prime).abs().sum(dim=1)
-        return (delta/self.M/2).mean()
+        self.penaltyCount += 1
+        return (delta/self.M).mean().multiply(np.log10(self.penaltyCount))
 
     def _calc_discrim_loss(self, X: Tensor) -> Tensor:
         r"""

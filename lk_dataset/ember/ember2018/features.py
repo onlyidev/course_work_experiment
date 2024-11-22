@@ -4,7 +4,8 @@ import numpy as np
 from collections import Counter
 df1 = pd.read_csv("./malware.csv")
 df2 = pd.read_csv("./benign.csv")
-df = pd.concat([df1,df2])
+df3 = pd.read_csv("./magic.csv")
+df = pd.concat([df1,df2,df3])
 
 
 def createFeaturesVector():   

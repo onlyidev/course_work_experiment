@@ -12,11 +12,11 @@ import ast
 import pandas as pd
 
 
-Z=64
-h_gen=[256,128,256,512,1024]
+Z=100
+h_gen=[100,256,512,1024]
 h_discrim=[256,256]
 g_hidden=nn.LeakyReLU
-detector=None#BlackBoxDetector.Type.RandomForest
+detector=BlackBoxDetector.Type.RandomForest
 mal_file="data/malware.npy"
 ben_file="data/benign.npy"
 
@@ -70,9 +70,7 @@ malgan = WithThreshold(MalGAN(load_dataset(mal_file, MalGAN.Label.Malware.value)
                     g_hidden=g_hidden,
                     detector_type=detector))
 
-# malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=randomforest_g=leakyrelu_final.pth")
-# malgan.load("saved_models/malgan_z=128_d-gen=[256,_256]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
-malgan.load("saved_models/malgan_z=64_d-gen=[256,_128,_256,_512,_1024]_d-disc=[256,_256]_bs=32_bb=multilayerperceptron_g=leakyrelu_final.pth")
+malgan.load("saved_models/malgan_z=100_d-gen=[100,_256,_512,_1024]_d-disc=[256,_256]_bs=32_bb=randomforest_g=leakyrelu_final.pth")
 malgan.eval()
 
 # malwareMatrix = np.load("data/malware.npy")
@@ -101,24 +99,35 @@ def loadDir(path: str) -> list:
 def getFileSha(path: str) -> str:
     return os.popen(f"sha256sum -b {path}").read().split(" ", 1)[0]
 
+def bbPredict(x):
+    return malgan.base_model._bb.predict(x)
+
 apis = ast.literal_eval(open("apis", "r").read())
 f = Features(apis)
 
 batchedSamples = loadDir("lk_dataset/data/malware")
 df = []
 
-# logging.info("Encoding...")
-# for idx, samples in enumerate(batchedSamples):
-#     logging.info(f"Encoding batch {idx+1}")
-#     encoding = np.array([f.createEncoding(sample) for sample in samples])
-#     logging.info("Generating...")
-#     obfuscated = obfuscate(encoding)
-#     logging.info("Getting new libs...")
-#     delta = (encoding ^ obfuscated) & obfuscated
-#     logging.info("Obfuscating...")
-#     f.obfuscate(f"batch{idx}", delta, "lk_dataset/data/obfuscated")
-#     [df.append({"malware": sample, "obfuscated": getFileSha(os.path.join("lk_dataset/data/obfuscated", f"batch{idx}_{i}")), "added_features": delta[i].sum()}) for i, sample in enumerate(samples)]
-#     logging.info("Done...")
+logging.info("Encoding...")
+for idx, samples in enumerate(batchedSamples):
+    logging.info(f"Encoding batch {idx+1}")
+    encoding = np.array([f.createEncoding(sample) for sample in samples])
+    logging.info("Checking with Black Box [ORIG]")
+    bb = bbPredict(torch.tensor(encoding).cuda()).cpu().numpy()
+    logging.info("Generating...")
+    obfuscated = obfuscate(encoding)
+    logging.info("Checking with Black Box [ADV]")
+    bb_adv = bbPredict(torch.from_numpy(obfuscated).cuda()).cpu().numpy()
+    logging.info("Getting new libs...")
+    delta = (encoding ^ obfuscated) & obfuscated
+    logging.info("Obfuscating...")
+    f.obfuscate(f"batch{idx}", delta, "lk_dataset/data/obfuscated")
+    [df.append({"malware": getFileSha(sample), 
+                "obfuscated": getFileSha(os.path.join("lk_dataset/data/obfuscated", f"batch{idx}_{i}")), 
+                "added_features": delta[i].sum(),
+                "bb_orig": bb[i],
+                "bb_adv": bb_adv[i]}) for i, sample in enumerate(samples)]
+    logging.info("Done...")
 
-# df = pd.DataFrame(df)
-# df.to_csv("lk_dataset/data/df.csv", index=False)
+df = pd.DataFrame(df)
+df.to_csv("lk_dataset/data/df.csv", index=False)

@@ -17,9 +17,9 @@ def analyzeInVT(sha):
     analyses.append(analysis)
     return analysis.last_analysis_stats["undetected"]
 try:
-    if not "undetected_malware" in df.columns:
-        df["undetected_malware"] = df["malware"].apply(analyzeInVT)
-    df.to_csv("lk_dataset/data/df.csv", index=False)
+    # if not "undetected_malware" in df.columns:
+    #     df["undetected_malware"] = df["malware"].apply(analyzeInVT)
+    # df.to_csv("lk_dataset/data/df.csv", index=False)
     if not "undetected_obfuscated" in df.columns:
         df["undetected_obfuscated"] = df["obfuscated"].apply(analyzeInVT)
     df.to_csv("lk_dataset/data/df.csv", index=False)

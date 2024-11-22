@@ -41,6 +41,7 @@ class Generator(nn.Module):
         self._layers, dim = nn.Sequential(), [M + self._Z] + hidden_size
         for i, (d_in, d_out) in enumerate(zip(dim[:-1], dim[1:])):
             self._layers.add_module("FF%02d" % i, nn.Sequential(nn.Linear(d_in, d_out), g))
+            self._layers.add_module("FF_DROP%02d" % i, nn.Dropout(p=0.9))
 
         # Last layer is always sigmoid
         layer = nn.Sequential(nn.Linear(dim[-1], M), nn.Sigmoid())
@@ -50,7 +51,6 @@ class Generator(nn.Module):
         # Step 1: Sampqle from a standard Gaussian distribution
         samples = torch.randn(shape)
         
-        # Step 2: Normalize to the range [-1, 1]
         samples = (samples - samples.min()) / (samples.max() - samples.min())  # Scale to [0, 1]
         return samples
 
